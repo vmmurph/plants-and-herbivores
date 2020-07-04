@@ -5,7 +5,8 @@
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="Tools.js"></script>
     <script src="TileWorld.js"></script>
-    <script src="Organism.js"></script>
+    <script src="Plant.js"></script>
+    <script src="Herbivore.js"></script>
     <style>
       body { background-color: white; }
       .buttons {
@@ -34,10 +35,11 @@
       const drawSkip = 1
 
       var t = new TileWorld(tileWidth, tileHeight)
-      t.insertObj(new Plant(), 0, 1)
-      t.insertObj(new Plant(), 1, 0)
+      t.insertObj(new Plant(), 0, 2)
+      t.insertObj(new Plant(), 2, 0)
       t.insertObj(new Plant(), 1, 1)
       t.insertObj(new Herbivore(), 0, 0)
+      t.insertObj(new Plant(500), 49, 24)
 
       let margin = {
         top: 20,
@@ -126,8 +128,7 @@
             .attr('r', tileSize / 2 - 1)
             //.attr('fill', '#f5f5f5')
             .attr('fill', 'none')
-            //.attr('stroke', d => Tools.getHexColor(d.color))
-            .attr('stroke', 'black')
+            .attr('stroke', d => Tools.getHexColor(d.color))
             .attr('stroke-width', 3)
             .attr('cx', d => x(d.tile.xloc) + (tileSize / 2))
             .attr('cy', d => y(d.tile.yloc) + (tileSize / 2))
@@ -167,14 +168,13 @@
       }
 
       const clearBtn = () => {
-        for (let i = 0; i < t.flatWorld.length; i++) {
-          t.flatWorld[i].obj = null
-        }
-        let newX = Tools.getRand(0, tileWidth - 1)
-        let newY = Tools.getRand(0, tileHeight - 1)
-        let newColor = Tools.getRand(0, 999)
-        t.insert(new Plant(newColor), newX, newY)
+        t = new TileWorld(tileWidth, tileHeight)
+        t.insertObj(new Plant(), 0, 2)
+        t.insertObj(new Plant(), 2, 0)
+        t.insertObj(new Plant(), 1, 1)
+        t.insertObj(new Herbivore(), 0, 0)
         drawPlants()
+        drawHerbivores()
       }
     </script>
   </body>

@@ -1,8 +1,4 @@
 const Tools = function () {
-  const roll = (p = 10) => {
-    return Math.floor(Math.random() * p) === 0
-  }
-
   /*
    * frequency is a constant that controls how fast the wave oscillates
    * increment is a variable that counts up, typically provided by a loop
@@ -44,13 +40,42 @@ const Tools = function () {
     return Math.floor(Math.random() * range) + min
   }
 
-  // TODO
-  Array.prototype.shuffle = () => {}
+  const roll = (p = 10) => {
+    return Math.floor(Math.random() * p) === 0
+  }
+
+  const chance = (percent) => {
+    return getRand(0, 99) < percent
+  }
+
+  const mutateColor = (color, intensity) => {
+    let newColor = color + getRand(intensity * -1, intensity)
+    // these should correlate to the steps in Tools.getHexColor
+    if (newColor < 0) newColor = 999
+    if (newColor > 999) newColor = 0
+    return newColor
+  }
+
+  // finds diff between two numbers when they loop around back 0 at some point
+  const pacmanDiff = (n1, n2, loopNum = 1000) => {
+    let ans1 = Math.abs(n1 - n2)
+    if (ans1 <= loopNum / 2) return ans1
+
+    if (n1 > n2) {
+        n1 -= loopNum
+    } else {
+        n2 -= loopNum
+    }
+    return Math.abs(n1 - n2)
+}
 
   return {
     roll,
+    chance,
     getHexColor,
-    getRand
+    getRand,
+    mutateColor,
+    pacmanDiff
   }
 }()
 
