@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Plants and Herbivores</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="Tools.js"></script>
+    <script src="TileWorld.js"></script>
+    <script src="Organism.js"></script>
+    <style>
+      body { background-color: white; }
+      .buttons {
+                margin-left: 18px;
+                margin-bottom: 20px;
+            }
+  </style>
+  </head>
+  <body>
+    <svg id="canvas" height='500' width='800'></svg>
+    <br />
+        <div class="buttons">
+            <button id="step" onclick="step()">Step</button>
+            <button id="start" onclick="startInterval()">Start</button>
+            <button id="stop" onclick="stopInterval()" disabled>Stop</button>
+            <button id="clearBtn" onclick="clearBtn()">Clear</button>
+        </div>
+
+    <script>
+      const tileWidth = 50
+      const tileHeight = 25
+      const tileSize = 15
+      // milliseconds between every step when running automatically
+      const intervalTime = 150
+      // skips every <num> draw steps
+      const drawSkip = 1
+
+      var t = new TileWorld(tileWidth, tileHeight)
+      t.insertObj(new Plant(), 0, 1)
+      t.insertObj(new Plant(), 1, 0)
+      t.insertObj(new Plant(), 1, 1)
+      t.insertObj(new Herbivore(), 0, 0)
+
+      let margin = {
+        top: 20,
+        right: 20,
+        bottom: 20,
+        left: 20
+      }
+
+      let svg = d3.select('#canvas')
+      svg.attr('width', tileWidth * tileSize + margin.left + margin.right)
+         .attr('height', tileHeight * tileSize + margin.top + margin.bottom)
+
+      let width = svg.attr('width') - margin.left - margin.right
+      let height = svg.attr('height') - margin.top - margin.bottom
+      let g = svg.append('g').attr('transform', `translate(${margin.left}, ${margin.top})`)
+
+      let x = d3.scaleLinear().domain([0, t.width]).range([0, width])
+      let y = d3.scaleLinear().domain([0, t.height]).range([0, height])
+
+      // world borders
+      g.append('rect')
+        .attr('x', -2)
+        .attr('y', -2)
+        .attr('width', width + 4)
+        .attr('height', height + 4)
+        .attr('rx', 1)
+        .attr('ry', 1)
+        .attr('fill', '#f5f5f5')
+        .attr('stroke', 'grey')
+        .attr('stroke-width', 1)
+
+      const getOrganisms = () => {
+        const organisms = []
+        t.flatWorld.forEach(tile => {
+          tile.objs.forEach(obj => {
+            organisms.push(obj)
+          })
+        })
+        return organisms
+      }
+
+      // plants
+      const p = g.append('g')
+
+      const getPlantSize = d => {
+        let fullSize = tileSize - 1
+        return d.size / 4 * fullSize
+      }
+
+      const getPlantX = d => x(d.tile.xloc) + (tileSize / 2) - (getPlantSize(d) / 2)
+      const getPlantY = d => y(d.tile.yloc) + (tileSize / 2) - (getPlantSize(d) / 2)
+      
+      function drawPlants () {
+        let plants = getOrganisms().filter(e => e.name === 'plant')
+        let plantSelection = p.selectAll('rect').data(plants, d => d.key)
+        plantSelection.enter()
+          .append('rect')
+            .attr('fill', d => Tools.getHexColor(d.color))
+            .attr('rx', 1)
+            .attr('ry', 1)
+            .attr('x', getPlantX)
+            .attr('y', getPlantY)
+            .attr('width', getPlantSize)
+            .attr('height', getPlantSize)
+            .attr('opacity', .5)
+
+          plantSelection.transition().duration(intervalTime)
+            .attr('x', getPlantX)
+            .attr('y', getPlantY)
+            .attr('width', getPlantSize)
+            .attr('height', getPlantSize)
+
+          plantSelection.exit().remove()
+      }
+
+      drawPlants()
+
+      // herbivores
+      const h = g.append('g')
+
+      function drawHerbivores () {
+        let herbivores = getOrganisms().filter(e => e.name === 'herbivore')
+        let herbivoreSelection = h.selectAll('circle').data(herbivores, d => d.key)
+        herbivoreSelection.enter()
+          .append('circle')
+            .attr('r', tileSize / 2 - 1)
+            //.attr('fill', '#f5f5f5')
+            .attr('fill', 'none')
+            //.attr('stroke', d => Tools.getHexColor(d.color))
+            .attr('stroke', 'black')
+            .attr('stroke-width', 3)
+            .attr('cx', d => x(d.tile.xloc) + (tileSize / 2))
+            .attr('cy', d => y(d.tile.yloc) + (tileSize / 2))
+            .attr('opacity', .5)
+
+          herbivoreSelection.transition().duration(intervalTime)
+            .attr('cx', d => x(d.tile.xloc) + (tileSize / 2))
+            .attr('cy', d => y(d.tile.yloc) + (tileSize / 2))
+
+          herbivoreSelection.exit().remove()
+      }
+
+      drawHerbivores()
+
+      // button functions
+      const step = () => {
+        t.timeStep()
+        drawPlants()
+        drawHerbivores()
+      }
+
+      let interval
+      const startInterval = () => {
+          d3.select('#start').attr('disabled', true)
+          d3.select('#stop').attr('disabled', null)
+          let stepNum = 0
+          interval = d3.interval(() => {
+            stepNum++
+            step()
+          }, intervalTime)
+      }
+
+      const stopInterval = () => {
+          d3.select('#start').attr('disabled', null)
+          d3.select('#stop').attr('disabled', true)
+          interval.stop()
+      }
+
+      const clearBtn = () => {
+        for (let i = 0; i < t.flatWorld.length; i++) {
+          t.flatWorld[i].obj = null
+        }
+        let newX = Tools.getRand(0, tileWidth - 1)
+        let newY = Tools.getRand(0, tileHeight - 1)
+        let newColor = Tools.getRand(0, 999)
+        t.insert(new Plant(newColor), newX, newY)
+        drawPlants()
+      }
+    </script>
+  </body>
+</html>
