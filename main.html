@@ -26,20 +26,24 @@
         </div>
 
     <script>
-      const tileWidth = 50
+      const tileWidth = 45
       const tileHeight = 25
-      const tileSize = 15
+      const tileSize = 30
       // milliseconds between every step when running automatically
-      const intervalTime = 150
+      const intervalTime = 200
       // skips every <num> draw steps
       const drawSkip = 1
 
       var t = new TileWorld(tileWidth, tileHeight)
-      t.insertObj(new Plant(), 0, 2)
-      t.insertObj(new Plant(), 2, 0)
-      t.insertObj(new Plant(), 1, 1)
-      t.insertObj(new Herbivore(), 0, 0)
-      t.insertObj(new Plant(500), 49, 24)
+      t.insertObj(new Plant(), 1, 0)
+      let p2 = t.insertObj(new Plant(), 2, 0)
+      p2.size = 4
+      t.insertObj(new Plant(), 2, 1)
+      t.insertObj(new Plant(), 4, 0)
+      t.insertObj(new Plant(), 2, 3)
+      let herb = t.insertObj(new Herbivore(), 0, 0)
+      herb.calories = 9
+      //t.insertObj(new Plant(500), 49, 24)
 
       let margin = {
         top: 20,
@@ -68,6 +72,7 @@
         .attr('rx', 1)
         .attr('ry', 1)
         .attr('fill', '#f5f5f5')
+        //.attr('fill', 'black')
         .attr('stroke', 'grey')
         .attr('stroke-width', 1)
 
@@ -104,7 +109,8 @@
             .attr('y', getPlantY)
             .attr('width', getPlantSize)
             .attr('height', getPlantSize)
-            .attr('opacity', .5)
+            .attr('opacity', .9)
+            .attr('coordinates', d => `(${d.tile.xloc}, ${d.tile.yloc})`)
 
           plantSelection.transition().duration(intervalTime)
             .attr('x', getPlantX)
@@ -129,14 +135,17 @@
             //.attr('fill', '#f5f5f5')
             .attr('fill', 'none')
             .attr('stroke', d => Tools.getHexColor(d.color))
-            .attr('stroke-width', 3)
+            .attr('stroke-width', d => d.getSize())
             .attr('cx', d => x(d.tile.xloc) + (tileSize / 2))
             .attr('cy', d => y(d.tile.yloc) + (tileSize / 2))
-            .attr('opacity', .5)
+            .attr('coordinates', d => `(${d.tile.xloc}, ${d.tile.yloc})`)
+            .attr('opacity', .9)
 
           herbivoreSelection.transition().duration(intervalTime)
             .attr('cx', d => x(d.tile.xloc) + (tileSize / 2))
             .attr('cy', d => y(d.tile.yloc) + (tileSize / 2))
+            .attr('coordinates', d => `(${d.tile.xloc}, ${d.tile.yloc})`)
+            .attr('stroke-width', d => d.getSize())
 
           herbivoreSelection.exit().remove()
       }
@@ -156,8 +165,12 @@
           d3.select('#stop').attr('disabled', null)
           let stepNum = 0
           interval = d3.interval(() => {
+            t.timeStep()
             stepNum++
-            step()
+            if (stepNum % drawSkip === 0) {
+              drawPlants()
+              drawHerbivores()
+            }
           }, intervalTime)
       }
 
@@ -169,10 +182,15 @@
 
       const clearBtn = () => {
         t = new TileWorld(tileWidth, tileHeight)
+        p.selectAll('rect').remove()
+        t.insertObj(new Plant(), 0, 1)
         t.insertObj(new Plant(), 0, 2)
+        t.insertObj(new Plant(), 1, 0)
         t.insertObj(new Plant(), 2, 0)
         t.insertObj(new Plant(), 1, 1)
-        t.insertObj(new Herbivore(), 0, 0)
+        t.insertObj(new Plant(500), tileWidth - 1, tileHeight - 1)
+        let herb = t.insertObj(new Herbivore(), 0, 0)
+        herb.calories = 9
         drawPlants()
         drawHerbivores()
       }

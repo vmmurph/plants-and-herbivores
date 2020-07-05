@@ -76,6 +76,7 @@ function TileWorld (width, height) {
     
     tile.objs.push(obj)
     let listLen = this.allObjs.push(obj)
+    return obj
   }
 
   this.removeObj = function (key) {
