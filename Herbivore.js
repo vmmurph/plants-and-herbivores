@@ -78,8 +78,9 @@ function Herbivore (color = 0) {
     return reducer
   }
 
+  // should return between 0 and 10
   this.getSize = function () {
-    return Math.ceil(this.calories / 2)
+    return this.calories > 10 ? 10 : this.calories
   }
 
   this.hasFood = function () {
