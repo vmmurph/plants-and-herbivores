@@ -79,6 +79,7 @@ function TileWorld (width, height) {
     return obj
   }
 
+  // TODO have this return success boolean
   this.removeObj = function (key) {
     // remove from allObjs
     let index = this.allObjs.findIndex(e => e.key === key)
@@ -97,6 +98,8 @@ function TileWorld (width, height) {
     this.timeStepObjs.splice(index, 1)
   }
 
+  //TODO this should probably just take a tile instead of (x, y)
+  // also, have it return tile
   this.moveObj = function (key, x, y) {
     let obj = this.allObjs.find(e => e.key === key)
     let originTile = obj.tile

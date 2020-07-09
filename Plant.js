@@ -1,12 +1,27 @@
-function Plant (color = 0) {
-  this.name = 'plant'
-  this.asText = function () { return 'P' + this.size }
-  this.size = 1
-  this.tile = {}
-  this.color = color
-  this.doneGrowing = false
+class Plant {
+  name = 'plant'
+  size = 1
+  doneGrowing = false
+  mutationFactor = 10
 
-  this.propagate = function () {
+  constructor (color = 0) {
+    this.color = color
+  }
+
+  asText () { return 'P' + this.size }
+
+  grow () {
+    if (this.size < 5 && Tools.roll(50)) {
+      this.size++
+    }
+  }
+
+  onTimeStep () {
+    this.propagate()
+    this.grow()
+  }
+
+  propagate () {
     // find an adjacent space that has no objects in it
     let neighbors = this.tile.world.getNeighbors(this.tile.xloc, this.tile.yloc)
     let openNeighbors = neighbors.filter(e => e.objs.length < 1)
@@ -17,20 +32,9 @@ function Plant (color = 0) {
     // chance to grow (ex. 5 means 1 in 5 chance)
     if (Tools.roll(5)) {
       // how fast the plant color mutates
-      let newColor = Tools.mutateColor(this.color, 75)
+      let newColor = Tools.mutateColor(this.color, this.mutationFactor)
       this.tile.world.insertObj(new Plant(newColor), chosenTile.xloc, chosenTile.yloc)
     }
-  }
-
-  this.grow = function () {
-    if (this.size < 4 && Tools.roll(50) ) {
-      this.size++
-    }
-  }
-
-  this.onTimeStep = () => {
-    this.propagate()
-    this.grow()
   }
 }
 

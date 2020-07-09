@@ -1,22 +1,25 @@
-function Herbivore (color = 0) {
-  this.name = 'herbivore'
-  this.asText = function () { return 'HH' }
-  this.tile = {}
-  this.color = color
-  this.calories = 5
+class Herbivore {
+  name = 'herbivore'
+  movementCost = 1
+  eatCost = 1
+  mutationFactor = 35
+  
+  constructor (color = 0, calories = 10, gestation = 20) {
+    this.color = color
+    this.calories = calories
+    // how many calorie points to accumulate before propagating
+    this.gestation = gestation
+  }
 
-  this.chanceToEat = (herb, food) => {
-    let colorDiff = Tools.pacmanDiff(food.color, this.color)
+  asText () { return 'HH' }
+
+  chanceToEat (herb, food) {
+    let colorDiff = Tools.pacmanDiff(food.color, herb.color)
     return Math.ceil((500 - colorDiff) / 5) - 10
   }
 
-  this.die = function () {
-    let world = this.tile.world
-    world.removeObj(this.key)
-  }
-
-  this.eat = function () {
-    let food = this.hasFood()
+  eat () {
+    let food = this.onFood()
     let chanceToEat = this.chanceToEat(this, food)
     let success = Tools.chance(chanceToEat)
     if (success) {
@@ -24,12 +27,12 @@ function Herbivore (color = 0) {
       this.calories += food.size
       world.removeObj(food.key)
     } else {
-      this.calories -= 1
+      this.calories -= this.eatCost
     }
     return success
   }
 
-  this.findFood = function () {
+  findFood () {
     let neighborTiles = this.tile.world.getNeighbors(this.tile.xloc, this.tile.yloc)
     neighborTiles.push(this.tile)
     let nearbyPlants = []
@@ -45,92 +48,113 @@ function Herbivore (color = 0) {
     return null
   }
 
-  this.onSameTile = (obj1, obj2) => {
-    return obj1.tile.xloc === obj2.tile.xloc && obj1.tile.yloc === obj2.tile.yloc
+  kill () {
+    let world = this.tile.world
+    return world.removeObj(this.key)
   }
 
-  this.plantHasCompetition = (herb, plant) => {
+  //TODO rename to something like "tileHasHerb" and it should only need the tile
+  plantHasCompetition (herb, plant) {
+    // if herb is already on this plant, it doesn't count as competition
     if (this.onSameTile(herb, plant)) return false
+    // otherwise we want to know if a plant is about to be eaten by a competing herb
     return plant.tile.objs.filter(o => o.name === 'herbivore').length > 0
   }
 
-  // compares 2 plants and gives them scores. higher scoring plant is returned
-  this.comparePlants = (herb, plant1, plant2) => {
+  comparePlants (herb, plant1, plant2) {
+    // score is the chance to eat multiplied by the calories herb would get
     let score1 = this.chanceToEat(herb, plant1) / 100 * plant1.size
     let score2 = this.chanceToEat(herb, plant2) / 100 * plant2.size
-    // add positive modifier if herb is already on the tile
-    if (this.onSameTile(herb, plant1)) score1 += 1.1
-    if (this.onSameTile(herb, plant2)) score2 += 1.1
+    // add negative modifier if herb is not already on the plant
+    if (!this.onSameTile(herb, plant1)) score1 -= this.movementCost
+    if (!this.onSameTile(herb, plant2)) score2 -= this.movementCost
     // add negative modifier if plant has a competing herb on it
-    if (this.plantHasCompetition(herb, plant1)) score1 -= 2
-    if (this.plantHasCompetition(herb, plant2)) score2 -= 2
-    // console.log(`plant (${plant1.tile.xloc}, ${plant1.tile.yloc}) has score ${score1}`)
-    // console.log(`plant (${plant2.tile.xloc}, ${plant2.tile.yloc}) has score ${score2}`)
+    if (this.plantHasCompetition(herb, plant1)) score1 -= .5
+    if (this.plantHasCompetition(herb, plant2)) score2 -= .5
     return score1 > score2 ? plant1 : plant2
   }
 
-  // this is the logic for comparing plants and deciding which is the best
-  this.getBestFoodReducer = (herb) => {
-    let reducer = (currMax, curr) => {
-      if (!currMax) return curr
-      return this.comparePlants(herb, curr, currMax)
+  getBestFoodReducer (herb) {
+    return (best, curr) => {
+      if (!best) return curr
+      return this.comparePlants(herb, curr, best)
     }
-    return reducer
   }
 
-  // should return between 0 and 10
-  this.getSize = function () {
-    return this.calories > 10 ? 10 : this.calories
+  /**
+   * Returns an integer size between 0 and 10
+   */
+  getDrawSize () {
+    return Math.ceil(this.calories / this.gestation * 10)
   }
 
-  this.hasFood = function () {
+  //TODO give better name or have it return true/false
+  onFood () {
     let tilePlants = this.tile.objs.filter(o => o.name === 'plant')
     if (tilePlants.length < 1) return false
     return tilePlants[0]
   }
 
-  this.move = function (tile) {
+  /**
+   * If a tile is given, moves to that tile.
+   * 
+   * Otherwise, it moves to a random adjacent tile.
+   */
+  move (tile) {
     let world = this.tile.world
+    this.calories -= this.movementCost
     if (tile) {
-      world.moveObj(this.key, tile.xloc, tile.yloc)
-    } else {
-      let neighborTiles = this.tile.world.getNeighbors(this.tile.xloc, this.tile.yloc)
-      let index = Tools.getRand(0, neighborTiles.length - 1)
-      let destinationTile = neighborTiles[index]
-      world.moveObj(this.key, destinationTile.xloc, destinationTile.yloc)
+      return world.moveObj(this.key, tile.xloc, tile.yloc)
     }
-    this.calories -= 1
-  }
-
-  this.propagate = () => {
-    let world = this.tile.world
     let neighborTiles = this.tile.world.getNeighbors(this.tile.xloc, this.tile.yloc)
     let index = Tools.getRand(0, neighborTiles.length - 1)
     let destinationTile = neighborTiles[index]
-    let newColor = Tools.mutateColor(this.color, 40)
-    world.insertObj(new Herbivore(newColor), destinationTile.xloc, destinationTile.yloc)
-    this.calories -= 5
+    return world.moveObj(this.key, destinationTile.xloc, destinationTile.yloc)
   }
 
-  this.onTimeStep = function () {
-    if (this.calories < 1) {
-      this.die()
-      return
+  onSameTile (obj1, obj2) {
+    if (!obj1 || !obj2) return false
+    return obj1.tile === obj2.tile
+  }
+
+  // TODO do calorie check in this function and return success boolean
+  propagate () {
+    if (this.calories >= this.gestation) {
+      let world = this.tile.world
+      let neighborTiles = this.tile.world.getNeighbors(this.tile.xloc, this.tile.yloc)
+      let index = Tools.getRand(0, neighborTiles.length - 1)
+      let destinationTile = neighborTiles[index]
+      let newColor = Tools.mutateColor(this.color, this.mutationFactor)
+
+      // commented out below was used to mutate gestation
+      // let newGestation = this.gestation + Tools.getRand(-1, 1)
+      // if (newGestation < 2) newGestation = 2
+      // let child = new Herbivore(newColor, Math.floor(this.gestation / 2), newGestation)
+
+      let child = new Herbivore(newColor, Math.floor(this.gestation / 2))
+      // console.log(`new child made with color ${newColor}, ${Math.floor(this.gestation / 2)} calories`)
+      world.insertObj(child, destinationTile.xloc, destinationTile.yloc)
+      this.calories -= Math.floor(this.gestation / 2)
+      return true
     }
-    let food = this.findFood()
-    if (food && this.onSameTile(this, food) && this.calories > 2) {
-      this.eat()
-      return
-    }
-    if (this.calories > 9) {
-      this.propagate()
-      return
-    }
-    if (food) {
-      this.move(food.tile)
-      return
-    }
-    this.move()
+    return false
+  }
+
+  starved () {
+    return this.calories <= 0
+  }
+
+  onTimeStep () {
+    if (this.starved()) { return this.kill() }
+
+    // look around for the best food for this herb
+    let bestFood = this.findFood()
+    let onBestFood = this.onSameTile(this, bestFood)
+    if (onBestFood) { return this.eat() }
+    if (this.propagate()) { return }
+    if (bestFood) { return this.move(bestFood.tile) }
+    // random move
+    return this.move()
   }
 }
 
